@@ -1,0 +1,1044 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>シフトスケジュール Manager</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        ios: {
+                            blue: '#007AFF',
+                            green: '#34C759',
+                            orange: '#FF9500',
+                            red: '#FF3B30',
+                            purple: '#AF52DE',
+                            gray: '#8E8E93',
+                            bg: '#F2F2F7',
+                            card: '#FFFFFF'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: #f3f4f6;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+<body class="text-gray-800 antialiased min-h-screen flex flex-col pb-10">
+
+    <!-- App Header -->
+    <header class="bg-white/80 backdrop-blur-md border-b border-gray-200 sticky top-0 z-30 px-4 py-3 shadow-sm">
+        <div class="max-w-4xl mx-auto flex items-center justify-between">
+            <div class="flex items-center space-x-2">
+                <div class="w-8 h-8 rounded-xl bg-ios-blue flex items-center justify-center text-white font-bold text-lg shadow-md">
+                    <i class="fa-regular fa-calendar-check text-sm"></i>
+                </div>
+                <h1 class="font-bold text-lg text-gray-900 tracking-tight">シフトManager</h1>
+            </div>
+
+            <!-- Top Action Controls -->
+            <div class="flex items-center space-x-2">
+                <button onclick="openModal('templates-modal')" class="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold rounded-xl transition flex items-center gap-1.5 border border-gray-300">
+                    <i class="fa-solid fa-sliders text-ios-blue"></i>
+                    <span>テンプレート管理 (50+)</span>
+                    <span id="badge-template-count" class="bg-ios-blue text-white text-[10px] px-1.5 py-0.2 rounded-full ml-0.5">5</span>
+                </button>
+
+                <!-- Passcode Lock Trigger -->
+                <button onclick="lockApp()" title="アプリをロック" class="w-8 h-8 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl transition flex items-center justify-center border border-slate-300">
+                    <i class="fa-solid fa-lock text-xs"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="max-w-4xl mx-auto w-full px-3 sm:px-4 mt-4 flex-grow space-y-4">
+
+        <!-- Calendar Controls & Google Direct Settings -->
+        <div class="bg-white rounded-2xl p-4 shadow-sm border border-gray-200/80 flex flex-col md:flex-row md:items-center justify-between gap-3">
+            <div class="flex items-center justify-between md:justify-start gap-4">
+                <button onclick="changeMonth(-1)" class="w-9 h-9 flex items-center justify-center rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 transition active:scale-95">
+                    <i class="fa-solid fa-chevron-left text-sm"></i>
+                </button>
+                <h2 id="current-month-label" class="text-xl font-bold text-gray-800 min-w-[120px] text-center">
+                    2026年 8月
+                </h2>
+                <button onclick="changeMonth(1)" class="w-9 h-9 flex items-center justify-center rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 transition active:scale-95">
+                    <i class="fa-solid fa-chevron-right text-sm"></i>
+                </button>
+            </div>
+
+            <!-- Direct Google Sync Status / Auth Button -->
+            <div class="flex items-center justify-end gap-2">
+                <button id="btn-gapi-auth" onclick="toggleGoogleAuth()" class="px-3 py-1.5 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 text-xs font-bold rounded-xl transition flex items-center gap-1.5">
+                    <i class="fa-brands fa-google text-emerald-600"></i>
+                    <span id="gapi-status-text">Google API設定</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Calendar Section -->
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-200/80 p-3 sm:p-4">
+            <!-- Weekday Header -->
+            <div class="grid grid-cols-7 gap-1 text-center font-bold text-xs mb-2 text-gray-500">
+                <div class="text-red-500 py-1">日</div>
+                <div class="py-1">月</div>
+                <div class="py-1">火</div>
+                <div class="py-1">水</div>
+                <div class="py-1">木</div>
+                <div class="py-1">金</div>
+                <div class="text-blue-500 py-1">土</div>
+            </div>
+
+            <!-- Calendar Days Grid -->
+            <div id="calendar-grid" class="grid grid-cols-7 gap-1 sm:gap-1.5">
+                <!-- Cells generated via JavaScript -->
+            </div>
+        </div>
+
+    </main>
+
+    <!-- PASSCODE LOCK / SETUP OVERLAY -->
+    <div id="lock-screen" class="fixed inset-0 z-50 bg-slate-900/95 backdrop-blur-xl flex flex-col items-center justify-center p-4 text-white">
+        <div class="max-w-xs w-full bg-slate-800/90 border border-slate-700/80 rounded-3xl p-6 text-center space-y-5 shadow-2xl">
+            <div class="w-16 h-16 bg-ios-blue/20 rounded-full flex items-center justify-center mx-auto text-ios-blue text-2xl border border-ios-blue/30 shadow-inner">
+                <i id="lock-icon" class="fa-solid fa-lock"></i>
+            </div>
+            <div>
+                <h2 id="lock-title" class="text-lg font-bold text-white">パスコード認証</h2>
+                <p id="lock-subtitle" class="text-xs text-slate-400 mt-1">暗号化データを解除します</p>
+            </div>
+            
+            <div class="space-y-3">
+                <input type="password" id="passcode-input" maxlength="6" inputmode="numeric" placeholder="● ● ● ●" onkeydown="if(event.key==='Enter') submitPasscode()" class="w-full text-center text-2xl tracking-[0.5em] font-mono bg-slate-900/90 border border-slate-700 rounded-2xl py-3 text-white focus:ring-2 focus:ring-ios-blue outline-none transition">
+                <p id="lock-error-msg" class="text-xs text-red-400 hidden font-medium">パスコードが正しくありません</p>
+            </div>
+
+            <button onclick="submitPasscode()" class="w-full bg-ios-blue hover:bg-blue-600 text-white font-bold py-3 rounded-2xl transition text-sm shadow-lg active:scale-98">
+                <span id="lock-btn-text">解除する</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- DAY MULTI-SHIFT DIRECT GOOGLE CALENDAR MODAL -->
+    <div id="day-modal" class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/40 backdrop-blur-sm hidden">
+        <div class="bg-white rounded-3xl max-w-lg w-full p-4 sm:p-5 shadow-2xl border border-gray-100 max-h-[90vh] flex flex-col space-y-3">
+            <div class="flex items-center justify-between border-b border-gray-100 pb-3">
+                <div>
+                    <h3 id="modal-date-title" class="text-base font-bold text-gray-900">日付のシフト登録</h3>
+                    <p class="text-[11px] text-gray-500">Googleカレンダーに直接書き込みます</p>
+                </div>
+                <button onclick="closeModal('day-modal')" class="text-gray-400 hover:text-gray-600 w-8 h-8 rounded-full flex items-center justify-center bg-gray-100">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <!-- Dynamic Shift Items List Container (Default 2 Rows) -->
+            <div id="shift-items-container" class="flex-grow overflow-y-auto space-y-3 pr-1 py-1">
+                <!-- Shift Rows populated by JavaScript -->
+            </div>
+
+            <!-- Add Shift Button -->
+            <button onclick="addEmptyShiftRow()" class="w-full py-2 bg-blue-50 border border-dashed border-blue-300 text-ios-blue hover:bg-blue-100 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5">
+                <i class="fa-solid fa-plus text-sm"></i>
+                <span>シフト枠をもう1件追加する</span>
+            </button>
+
+            <!-- Actions inside Modal -->
+            <div class="pt-2 border-t border-gray-100 flex flex-col gap-2">
+                <button onclick="exportShiftsToGoogleCalendar()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl shadow-md transition text-xs sm:text-sm flex items-center justify-center gap-2">
+                    <i class="fa-brands fa-google text-base"></i>
+                    <span>Googleカレンダーに直接書き込む</span>
+                </button>
+                <div class="flex justify-end items-center">
+                    <button onclick="closeModal('day-modal')" class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold px-4 py-1.5 rounded-xl text-xs">
+                        キャンセル
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- GOOGLE API CONFIG MODAL -->
+    <div id="gapi-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm hidden">
+        <div class="bg-white rounded-3xl max-w-md w-full p-5 shadow-2xl border border-gray-100 space-y-4">
+            <div class="flex items-center justify-between border-b border-gray-100 pb-2">
+                <h3 class="text-base font-bold text-gray-900 flex items-center gap-2">
+                    <i class="fa-brands fa-google text-emerald-600"></i> Google API 直接書き込み設定
+                </h3>
+                <button onclick="closeModal('gapi-modal')" class="text-gray-400 hover:text-gray-600 w-7 h-7 rounded-full flex items-center justify-center bg-gray-100">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            
+            <p class="text-xs text-gray-600 leading-relaxed">
+                Google Cloud Console で発行した <strong>OAuth Client ID</strong> を設定すると、確認画面なしで<strong>バックグラウンドでGoogleカレンダーに直接追加</strong>されます。
+            </p>
+
+            <div>
+                <label class="block text-xs font-bold text-gray-700 mb-1">Google OAuth Client ID</label>
+                <input type="text" id="gapi-client-id" placeholder="xxxx.apps.googleusercontent.com" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-emerald-500 outline-none">
+            </div>
+
+            <div class="bg-amber-50 border border-amber-200 rounded-xl p-2.5 text-[11px] text-amber-900">
+                <i class="fa-solid fa-circle-info text-amber-600 mr-1"></i> Client ID 未設定の場合でも、1タップでGoogleカレンダー保存画面がダイレクトに起動します。
+            </div>
+
+            <div class="flex justify-end gap-2 pt-2 border-t border-gray-100">
+                <button onclick="saveGApiClientId()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2 rounded-xl text-xs transition">
+                    保存する
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- TEMPLATE MANAGER MODAL (50+ Templates & Sheets Import) -->
+    <div id="templates-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm hidden">
+        <div class="bg-white rounded-3xl max-w-2xl w-full p-5 sm:p-6 shadow-2xl border border-gray-100 max-h-[90vh] flex flex-col space-y-4">
+            <div class="flex items-center justify-between border-b border-gray-100 pb-3">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-list-check text-ios-blue text-lg"></i>
+                    <h3 class="text-lg font-bold text-gray-900">シフトテンプレート管理 (50+対応)</h3>
+                </div>
+                <button onclick="closeModal('templates-modal')" class="text-gray-400 hover:text-gray-600 w-8 h-8 rounded-full flex items-center justify-center bg-gray-100">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <!-- Tab Buttons -->
+            <div class="flex border-b border-gray-200 text-sm font-semibold text-gray-500">
+                <button id="tab-btn-list" onclick="switchTemplateTab('list')" class="py-2 px-4 text-ios-blue border-b-2 border-ios-blue font-bold">
+                    登録済みテンプレート (<span id="total-template-count">0</span>)
+                </button>
+                <button id="tab-btn-import" onclick="switchTemplateTab('import')" class="py-2 px-4 hover:text-gray-800">
+                    <i class="fa-solid fa-file-csv text-emerald-600 mr-1"></i> Googleスプレッドシート取込
+                </button>
+            </div>
+
+            <!-- Tab 1: Template List & Search -->
+            <div id="tab-content-list" class="flex-grow flex flex-col space-y-3 overflow-hidden">
+                <div class="flex items-center justify-between gap-2">
+                    <div class="relative flex-grow">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-gray-400 text-xs"></i>
+                        <input type="text" id="template-search-input" oninput="renderTemplateEditor()" placeholder="テンプレート検索..." class="w-full bg-gray-50 border border-gray-200 rounded-xl pl-8 pr-3 py-1.5 text-xs focus:ring-2 focus:ring-ios-blue outline-none">
+                    </div>
+                    <button onclick="addNewBlankTemplate()" class="bg-ios-blue text-white px-3 py-1.5 rounded-xl text-xs font-semibold hover:bg-blue-600 transition flex items-center gap-1 shrink-0">
+                        <i class="fa-solid fa-plus"></i> 新規作成
+                    </button>
+                </div>
+
+                <div id="template-editor-list" class="flex-grow overflow-y-auto space-y-2 pr-1">
+                    <!-- Dynamic Rows -->
+                </div>
+            </div>
+
+            <!-- Tab 2: Spreadsheet Copy & Paste Import -->
+            <div id="tab-content-import" class="flex-grow hidden flex-col space-y-3 overflow-y-auto">
+                <div class="bg-emerald-50 border border-emerald-200 rounded-2xl p-3 text-xs text-emerald-900 space-y-1">
+                    <p class="font-bold"><i class="fa-solid fa-lightbulb text-emerald-600 mr-1"></i> Googleスプレッドシートから一括貼り付け可能！</p>
+                    <p class="text-emerald-800">スプレッドシートの「名前」「開始」「終了」のセル範囲を選択・コピーし、下のテキストエリアにそのまま貼り付けて「取り込み」を押してください。</p>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1">コピーしたテキストデータ (タブ区切り / CSV)</label>
+                    <textarea id="import-textarea" rows="6" placeholder="早番1	08:30	17:00
+遅番2	13:00	21:30
+夜勤A	21:00	08:00" class="w-full bg-gray-50 border border-gray-300 rounded-xl p-3 text-xs font-mono focus:ring-2 focus:ring-ios-blue outline-none"></textarea>
+                </div>
+
+                <div class="flex items-center justify-end gap-2">
+                    <button onclick="importFromSheetsText()" class="bg-emerald-600 text-white font-bold px-4 py-2 rounded-xl text-xs hover:bg-emerald-700 transition flex items-center gap-1">
+                        <i class="fa-solid fa-circle-check"></i> テンプレートデータを取り込む
+                    </button>
+                </div>
+            </div>
+
+            <div class="pt-2 border-t border-gray-100 flex justify-end">
+                <button onclick="closeModal('templates-modal')" class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold px-5 py-2 rounded-xl text-xs">
+                    閉じる
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <script>
+        let currentDate = new Date();
+        let selectedDateStr = "";
+        let googleClientId = "";
+        let accessToken = null;
+        let activeCryptoKey = null;
+
+        let templates = [
+            { id: "t1", name: "早番", startTime: "08:30", endTime: "17:00" },
+            { id: "t2", name: "遅番", startTime: "13:00", endTime: "21:30" },
+            { id: "t3", name: "夜勤", startTime: "21:00", endTime: "08:00" },
+            { id: "t4", name: "日勤", startTime: "09:00", endTime: "18:00" },
+            { id: "t5", name: "残業", startTime: "18:00", endTime: "21:00" }
+        ];
+
+        const STORAGE_VERIFIER_KEY = "sp_passcode_verifier";
+        const STORAGE_SALT_KEY = "sp_passcode_salt";
+        const STORAGE_ENC_TEMPLATES = "sp_enc_templates";
+        const STORAGE_ENC_GAPI = "sp_enc_gapi_id";
+
+        window.onload = function () {
+            checkPasscodeStatus();
+            renderCalendar();
+        };
+
+        async function deriveKey(passcode, saltUint8) {
+            const enc = new TextEncoder();
+            const keyMaterial = await crypto.subtle.importKey(
+                "raw",
+                enc.encode(passcode),
+                "PBKDF2",
+                false,
+                ["deriveKey"]
+            );
+            return await crypto.subtle.deriveKey(
+                {
+                    name: "PBKDF2",
+                    salt: saltUint8,
+                    iterations: 100000,
+                    hash: "SHA-256"
+                },
+                keyMaterial,
+                { name: "AES-GCM", length: 256 },
+                false,
+                ["encrypt", "decrypt"]
+            );
+        }
+
+        async function encryptText(text, key) {
+            const enc = new TextEncoder();
+            const iv = crypto.getRandomValues(new Uint8Array(12));
+            const encrypted = await crypto.subtle.encrypt(
+                { name: "AES-GCM", iv: iv },
+                key,
+                enc.encode(text)
+            );
+            const combined = new Uint8Array(iv.length + encrypted.byteLength);
+            combined.set(iv, 0);
+            combined.set(new Uint8Array(encrypted), iv.length);
+            return btoa(String.fromCharCode.apply(null, combined));
+        }
+
+        async function decryptText(cipherB64, key) {
+            const binary = atob(cipherB64);
+            const bytes = Uint8Array.from(binary, c => c.charCodeAt(0));
+            const iv = bytes.slice(0, 12);
+            const data = bytes.slice(12);
+            const decrypted = await crypto.subtle.decrypt(
+                { name: "AES-GCM", iv: iv },
+                key,
+                data
+            );
+            const dec = new TextDecoder();
+            return dec.decode(decrypted);
+        }
+
+        function checkPasscodeStatus() {
+            const verifier = localStorage.getItem(STORAGE_VERIFIER_KEY);
+            const lockTitle = document.getElementById('lock-title');
+            const lockSubtitle = document.getElementById('lock-subtitle');
+            const lockBtn = document.getElementById('lock-btn-text');
+
+            if (!verifier) {
+                // Setup mode
+                if(lockTitle) lockTitle.innerText = "パスコード新規設定";
+                if(lockSubtitle) lockSubtitle.innerText = "データ保護用の4〜6桁のパスコードを入力してください";
+                if(lockBtn) lockBtn.innerText = "設定して保護を開始";
+            } else {
+                // Unlock mode
+                if(lockTitle) lockTitle.innerText = "パスコード認証";
+                if(lockSubtitle) lockSubtitle.innerText = "暗号化データを解除します";
+                if(lockBtn) lockBtn.innerText = "解除する";
+            }
+            document.getElementById('lock-screen')?.classList.remove('hidden');
+        }
+
+        async function submitPasscode() {
+            const input = document.getElementById('passcode-input');
+            const passcode = input?.value || "";
+            const errElem = document.getElementById('lock-error-msg');
+            errElem?.classList.add('hidden');
+
+            if (!passcode || passcode.length < 4) {
+                showLockError("4桁以上の数字を入力してください");
+                return;
+            }
+
+            const verifier = localStorage.getItem(STORAGE_VERIFIER_KEY);
+
+            try {
+                if (!verifier) {
+                    // Create New Lock
+                    const salt = crypto.getRandomValues(new Uint8Array(16));
+                    const saltB64 = btoa(String.fromCharCode.apply(null, salt));
+                    
+                    activeCryptoKey = await deriveKey(passcode, salt);
+                    const encVerifier = await encryptText("VALID_PASSCODE_TOKEN", activeCryptoKey);
+
+                    localStorage.setItem(STORAGE_SALT_KEY, saltB64);
+                    localStorage.setItem(STORAGE_VERIFIER_KEY, encVerifier);
+
+                    // Save initial templates encrypted
+                    await saveEncryptedData();
+
+                    document.getElementById('lock-screen')?.classList.add('hidden');
+                    input.value = "";
+                    showToast("パスコードを設定しデータを暗号化しました", "success");
+                    initializeAppAfterUnlock();
+                } else {
+                    // Unlock Existing
+                    const saltB64 = localStorage.getItem(STORAGE_SALT_KEY);
+                    const salt = Uint8Array.from(atob(saltB64), c => c.charCodeAt(0));
+
+                    const derived = await deriveKey(passcode, salt);
+                    const decryptedVerifier = await decryptText(verifier, derived);
+
+                    if (decryptedVerifier === "VALID_PASSCODE_TOKEN") {
+                        activeCryptoKey = derived;
+                        await loadEncryptedData();
+                        document.getElementById('lock-screen')?.classList.add('hidden');
+                        input.value = "";
+                        initializeAppAfterUnlock();
+                    } else {
+                        showLockError("パスコードが間違っています");
+                    }
+                }
+            } catch(e) {
+                console.error(e);
+                showLockError("パスコードが違います");
+            }
+        }
+
+        function showLockError(msg) {
+            const errElem = document.getElementById('lock-error-msg');
+            if (errElem) {
+                errElem.innerText = msg;
+                errElem.classList.remove('hidden');
+            }
+        }
+
+        function lockApp() {
+            activeCryptoKey = null;
+            document.getElementById('lock-screen')?.classList.remove('hidden');
+            document.getElementById('passcode-input').value = "";
+            checkPasscodeStatus();
+            showToast("アプリをロックしました", "info");
+        }
+
+        async function saveEncryptedData() {
+            if (!activeCryptoKey) return;
+            try {
+                const jsonTemplates = JSON.stringify(templates);
+                const encT = await encryptText(jsonTemplates, activeCryptoKey);
+                localStorage.setItem(STORAGE_ENC_TEMPLATES, encT);
+
+                if (googleClientId) {
+                    const encG = await encryptText(googleClientId, activeCryptoKey);
+                    localStorage.setItem(STORAGE_ENC_GAPI, encG);
+                } else {
+                    localStorage.removeItem(STORAGE_ENC_GAPI);
+                }
+            } catch(e) {
+                console.error("Save encryption failed", e);
+            }
+        }
+
+        async function loadEncryptedData() {
+            if (!activeCryptoKey) return;
+            try {
+                const encT = localStorage.getItem(STORAGE_ENC_TEMPLATES);
+                if (encT) {
+                    const decJson = await decryptText(encT, activeCryptoKey);
+                    templates = JSON.parse(decJson);
+                }
+                const encG = localStorage.getItem(STORAGE_ENC_GAPI);
+                if (encG) {
+                    googleClientId = await decryptText(encG, activeCryptoKey);
+                }
+            } catch(e) {
+                console.error("Load decryption failed", e);
+            }
+        }
+
+        function initializeAppAfterUnlock() {
+            templates = templates.map(t => ({
+                ...t,
+                startTime: formatTimeHHMM(t.startTime),
+                endTime: formatTimeHHMM(t.endTime)
+            }));
+            renderCalendar();
+            renderTemplateEditor();
+            updateGApiUI();
+        }
+
+        function formatTimeHHMM(timeStr) {
+            if (!timeStr || typeof timeStr !== 'string') return "";
+            timeStr = timeStr.trim();
+            const parts = timeStr.split(':');
+            if (parts.length >= 2) {
+                let h = parseInt(parts[0], 10);
+                let m = parseInt(parts[1], 10);
+                if (!isNaN(h) && !isNaN(m)) {
+                    h = Math.max(0, Math.min(23, h));
+                    m = Math.max(0, Math.min(59, m));
+                    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+                }
+            }
+            return timeStr;
+        }
+
+        function changeMonth(delta) {
+            currentDate.setMonth(currentDate.getMonth() + delta);
+            renderCalendar();
+        }
+
+        function renderCalendar() {
+            const year = currentDate.getFullYear();
+            const month = currentDate.getMonth();
+
+            const monthLabel = document.getElementById('current-month-label');
+            if (monthLabel) {
+                monthLabel.innerText = `${year}年 ${month + 1}月`;
+            }
+
+            const grid = document.getElementById('calendar-grid');
+            if (!grid) return;
+            grid.innerHTML = "";
+
+            const firstDay = new Date(year, month, 1).getDay();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            const daysInPrevMonth = new Date(year, month, 0).getDate();
+
+            const today = new Date();
+            const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
+            // Previous Month Padding
+            for (let i = firstDay - 1; i >= 0; i--) {
+                const dayNum = daysInPrevMonth - i;
+                const cell = document.createElement('div');
+                cell.className = "h-20 sm:h-24 p-2 rounded-2xl bg-gray-50/40 border border-transparent opacity-25 text-xs select-none";
+                cell.innerHTML = `<span class="text-gray-400 font-medium">${dayNum}</span>`;
+                grid.appendChild(cell);
+            }
+
+            // Current Month Days
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dayStr = String(day).padStart(2, '0');
+                const monthStr = String(month + 1).padStart(2, '0');
+                const dateStr = `${year}-${monthStr}-${dayStr}`;
+
+                const cell = document.createElement('div');
+                const isToday = (dateStr === todayStr);
+
+                cell.className = `h-20 sm:h-24 p-2 rounded-2xl border transition cursor-pointer flex flex-col justify-between ${
+                    isToday ? 'border-ios-blue bg-blue-50/20 font-bold ring-1 ring-ios-blue' : 'border-gray-200 bg-white hover:border-emerald-500 hover:shadow-sm'
+                }`;
+
+                cell.onclick = () => openDayModal(dateStr);
+
+                cell.innerHTML = `
+                    <div class="flex justify-between items-center w-full">
+                        <span class="text-sm ${isToday ? 'text-ios-blue font-bold' : 'text-gray-700'}">${day}</span>
+                    </div>
+                    <div class="flex items-center justify-center text-gray-300 hover:text-emerald-600 transition">
+                        <i class="fa-solid fa-calendar-plus text-lg"></i>
+                    </div>
+                `;
+
+                grid.appendChild(cell);
+            }
+
+            // Next Month Padding
+            const totalCells = firstDay + daysInMonth;
+            const nextMonthPadding = (7 - (totalCells % 7)) % 7;
+            for (let i = 1; i <= nextMonthPadding; i++) {
+                const cell = document.createElement('div');
+                cell.className = "h-20 sm:h-24 p-2 rounded-2xl bg-gray-50/40 border border-transparent opacity-25 text-xs select-none";
+                cell.innerHTML = `<span class="text-gray-400 font-medium">${i}</span>`;
+                grid.appendChild(cell);
+            }
+        }
+
+        function openDayModal(dateStr) {
+            selectedDateStr = dateStr;
+            const modalTitle = document.getElementById('modal-date-title');
+            if (modalTitle) modalTitle.innerText = `${dateStr} のシフト書き込み`;
+
+            const container = document.getElementById('shift-items-container');
+            if (!container) return;
+            container.innerHTML = "";
+
+            for (let i = 1; i <= 2; i++) {
+                renderShiftInputCard({
+                    id: "shift_" + Date.now() + "_" + i
+                }, i);
+            }
+
+            openModal('day-modal');
+        }
+
+        function renderShiftInputCard(shiftData, shiftNum) {
+            const container = document.getElementById('shift-items-container');
+            if (!container) return;
+
+            const card = document.createElement('div');
+            card.className = "shift-card bg-gray-50 border border-gray-200 rounded-2xl p-3 space-y-2 relative";
+            card.dataset.shiftId = shiftData.id;
+
+            const optionsHtml = templates.map(t => 
+                `<option value="${t.id}">${t.name} (${t.startTime || '終日'} - ${t.endTime || ''})</option>`
+            ).join('');
+
+            card.innerHTML = `
+                <div class="flex items-center justify-between border-b border-gray-200/80 pb-2">
+                    <div class="flex items-center gap-2">
+                        <span class="w-5 h-5 rounded-full bg-gray-200 text-gray-700 text-[10px] font-bold flex items-center justify-center">
+                            ${shiftNum}
+                        </span>
+                        <span class="text-xs font-bold text-gray-700">シフト #${shiftNum}</span>
+                    </div>
+                    <button type="button" onclick="removeShiftCard(this)" class="text-red-400 hover:text-red-600 text-xs px-2 py-0.5 rounded-md hover:bg-red-50">
+                        <i class="fa-regular fa-trash-can"></i> 削除
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div>
+                        <label class="block text-[10px] font-semibold text-gray-500 mb-0.5">テンプレート選択 (${templates.length}+)</label>
+                        <select onchange="onSelectTemplateForCard(this)" class="template-select w-full bg-white border border-gray-300 rounded-xl px-2.5 py-1.5 text-xs font-semibold focus:ring-2 focus:ring-emerald-500 outline-none">
+                            <option value="">-- 手動入力 / 選択してください --</option>
+                            ${optionsHtml}
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] font-semibold text-gray-500 mb-0.5">シフト名</label>
+                        <input type="text" class="shift-name w-full bg-white border border-gray-300 rounded-xl px-2.5 py-1 text-xs font-bold focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="例: 早番, 夜勤">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-3 gap-2">
+                    <div>
+                        <label class="block text-[10px] font-bold text-amber-600 mb-0.5">早出 (分)</label>
+                        <input type="number" min="0" max="360" step="5" value="0" placeholder="0" oninput="onEarlyMinutesChange(this)" class="shift-early-mins w-full bg-amber-50/80 border border-amber-300 rounded-xl px-2.5 py-1 text-xs font-bold text-amber-900 focus:ring-2 focus:ring-amber-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-semibold text-gray-500 mb-0.5">開始時間</label>
+                        <input type="time" onchange="onManualStartChange(this)" class="shift-start-time w-full bg-white border border-gray-300 rounded-xl px-2.5 py-1 text-xs font-semibold focus:ring-2 focus:ring-emerald-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-semibold text-gray-500 mb-0.5">終了時間</label>
+                        <input type="time" class="shift-end-time w-full bg-white border border-gray-300 rounded-xl px-2.5 py-1 text-xs font-semibold focus:ring-2 focus:ring-emerald-500 outline-none">
+                    </div>
+                </div>
+
+                <div>
+                    <input type="text" class="shift-memo w-full bg-white border border-gray-300 rounded-xl px-2.5 py-1 text-xs focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="メモ・備考（場所、担当等）">
+                </div>
+            `;
+
+            container.appendChild(card);
+        }
+
+        function addEmptyShiftRow() {
+            const container = document.getElementById('shift-items-container');
+            const currentCount = container ? container.querySelectorAll('.shift-card').length : 0;
+            renderShiftInputCard({
+                id: "shift_" + Date.now() + "_" + (currentCount + 1)
+            }, currentCount + 1);
+        }
+
+        function removeShiftCard(btn) {
+            const card = btn.closest('.shift-card');
+            if (card) {
+                card.remove();
+                renumberShiftCards();
+            }
+        }
+
+        function renumberShiftCards() {
+            const container = document.getElementById('shift-items-container');
+            if (!container) return;
+            const cards = container.querySelectorAll('.shift-card');
+            cards.forEach((card, index) => {
+                const badge = card.querySelector('.w-5.h-5');
+                const label = card.querySelector('.text-xs.font-bold');
+                if (badge) badge.innerText = index + 1;
+                if (label) label.innerText = `シフト #${index + 1}`;
+            });
+        }
+
+        function onSelectTemplateForCard(selectElem) {
+            const templateId = selectElem.value;
+            const card = selectElem.closest('.shift-card');
+            if (!card) return;
+
+            const template = templates.find(t => t.id === templateId);
+            if (template) {
+                const normStart = formatTimeHHMM(template.startTime || "");
+                const normEnd = formatTimeHHMM(template.endTime || "");
+                card.querySelector('.shift-name').value = template.name;
+                card.dataset.baseStartTime = normStart;
+                card.querySelector('.shift-end-time').value = normEnd;
+                applyEarlyStartAdjustment(card);
+            }
+        }
+
+        function onManualStartChange(inputElem) {
+            const card = inputElem.closest('.shift-card');
+            if (!card) return;
+            const earlyMins = parseInt(card.querySelector('.shift-early-mins')?.value || 0, 10);
+            if (inputElem.value) {
+                card.dataset.baseStartTime = addMinutesToTimeStr(inputElem.value, earlyMins);
+            }
+        }
+
+        function onEarlyMinutesChange(inputElem) {
+            const card = inputElem.closest('.shift-card');
+            if (!card) return;
+            applyEarlyStartAdjustment(card);
+        }
+
+        function applyEarlyStartAdjustment(card) {
+            const baseStartTime = card.dataset.baseStartTime || card.querySelector('.shift-start-time').value;
+            if (!baseStartTime) return;
+
+            card.dataset.baseStartTime = card.dataset.baseStartTime || baseStartTime;
+            const earlyMins = Math.max(0, parseInt(card.querySelector('.shift-early-mins')?.value || 0, 10));
+            const adjustedStart = subtractMinutesFromTimeStr(card.dataset.baseStartTime, earlyMins);
+            card.querySelector('.shift-start-time').value = adjustedStart;
+        }
+
+        function subtractMinutesFromTimeStr(timeStr, mins) {
+            if (!timeStr || !timeStr.includes(':')) return "";
+            const [h, m] = timeStr.split(':').map(Number);
+            let totalMins = h * 60 + m - mins;
+            if (totalMins < 0) totalMins += 24 * 60;
+            const newH = Math.floor(totalMins / 60) % 24;
+            const newM = totalMins % 60;
+            return `${String(newH).padStart(2, '0')}:${String(newM).padStart(2, '0')}`;
+        }
+
+        function addMinutesToTimeStr(timeStr, mins) {
+            if (!timeStr || !timeStr.includes(':')) return "";
+            const [h, m] = timeStr.split(':').map(Number);
+            let totalMins = h * 60 + m + mins;
+            const newH = Math.floor(totalMins / 60) % 24;
+            const newM = totalMins % 60;
+            return `${String(newH).padStart(2, '0')}:${String(newM).padStart(2, '0')}`;
+        }
+
+        async function exportShiftsToGoogleCalendar() {
+            if (!selectedDateStr) return;
+
+            const container = document.getElementById('shift-items-container');
+            if (!container) return;
+
+            const cards = container.querySelectorAll('.shift-card');
+            const validShifts = [];
+
+            cards.forEach(card => {
+                const name = card.querySelector('.shift-name').value.trim();
+                const startTime = card.querySelector('.shift-start-time').value;
+                const endTime = card.querySelector('.shift-end-time').value;
+                let memo = card.querySelector('.shift-memo').value.trim();
+                const earlyMins = parseInt(card.querySelector('.shift-early-mins')?.value || 0, 10);
+
+                if (earlyMins > 0) {
+                    memo = memo ? `【早出 ${earlyMins}分】 ${memo}` : `【早出 ${earlyMins}分】`;
+                }
+
+                if (name || startTime) {
+                    validShifts.push({
+                        title: name || "シフト",
+                        startTime: startTime,
+                        endTime: endTime,
+                        memo: memo
+                    });
+                }
+            });
+
+            if (validShifts.length === 0) {
+                showToast("書き込むシフト情報を入力してください", "error");
+                return;
+            }
+
+            if (accessToken) {
+                let successCount = 0;
+                for (const s of validShifts) {
+                    const res = await insertGoogleCalendarEventDirect(selectedDateStr, s.title, s.startTime, s.endTime, s.memo);
+                    if (res) successCount++;
+                }
+                showToast(`${successCount}件のシフトをGoogleカレンダーに直接書き込みました！`, "success");
+                closeModal('day-modal');
+                return;
+            }
+
+            validShifts.forEach(s => {
+                openGoogleCalendarUrl(selectedDateStr, s.title, s.startTime, s.endTime, s.memo);
+            });
+
+            closeModal('day-modal');
+            showToast(`${validShifts.length}件のGoogleカレンダー画面を開きました`, "info");
+        }
+
+        function openGoogleCalendarUrl(dateStr, title, startTime, endTime, memo) {
+            let datesParam = "";
+            const cleanDate = dateStr.replace(/-/g, "");
+
+            if (startTime && endTime) {
+                const sTime = startTime.replace(":", "") + "00";
+                const eTime = endTime.replace(":", "") + "00";
+                datesParam = `${cleanDate}T${sTime}/${cleanDate}T${eTime}`;
+            } else {
+                datesParam = `${cleanDate}/${cleanDate}`;
+            }
+
+            const url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(title || 'シフト')}&dates=${datesParam}&details=${encodeURIComponent(memo || '')}`;
+            window.open(url, '_blank');
+        }
+
+        async function insertGoogleCalendarEventDirect(dateStr, title, startTime, endTime, memo) {
+            let startISO = `${dateStr}T${startTime || '09:00'}:00`;
+            let endISO = `${dateStr}T${endTime || '18:00'}:00`;
+
+            const event = {
+                'summary': title,
+                'description': memo,
+                'start': { 'dateTime': new Date(startISO).toISOString() },
+                'end': { 'dateTime': new Date(endISO).toISOString() }
+            };
+
+            try {
+                const response = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${accessToken}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(event)
+                });
+                return response.ok;
+            } catch(e) {
+                console.error(e);
+                return false;
+            }
+        }
+
+        function toggleGoogleAuth() {
+            if (!googleClientId) {
+                openModal('gapi-modal');
+            } else {
+                showToast("Google Client ID設定済み。直接書き込みモード有効です", "success");
+            }
+        }
+
+        async function saveGApiClientId() {
+            const input = document.getElementById('gapi-client-id').value.trim();
+            googleClientId = input;
+            await saveEncryptedData();
+            updateGApiUI();
+            closeModal('gapi-modal');
+            showToast("Google API IDを暗号化保存しました", "success");
+        }
+
+        function updateGApiUI() {
+            const txt = document.getElementById('gapi-status-text');
+            if (txt) {
+                txt.innerText = googleClientId ? "Google API (自動書き込み有効)" : "Google API設定";
+            }
+            const countElem = document.getElementById('total-template-count');
+            if (countElem) countElem.innerText = templates.length;
+            const badgeCount = document.getElementById('badge-template-count');
+            if (badgeCount) badgeCount.innerText = templates.length;
+        }
+
+        function switchTemplateTab(tab) {
+            const tabList = document.getElementById('tab-content-list');
+            const tabImport = document.getElementById('tab-content-import');
+            const btnList = document.getElementById('tab-btn-list');
+            const btnImport = document.getElementById('tab-btn-import');
+
+            if (tab === 'list') {
+                tabList.classList.remove('hidden');
+                tabList.classList.add('flex');
+                tabImport.classList.add('hidden');
+                tabImport.classList.remove('flex');
+
+                btnList.className = "py-2 px-4 text-ios-blue border-b-2 border-ios-blue font-bold";
+                btnImport.className = "py-2 px-4 hover:text-gray-800 text-gray-500";
+            } else {
+                tabImport.classList.remove('hidden');
+                tabImport.classList.add('flex');
+                tabList.classList.add('hidden');
+                tabList.classList.remove('flex');
+
+                btnImport.className = "py-2 px-4 text-ios-blue border-b-2 border-ios-blue font-bold";
+                btnList.className = "py-2 px-4 hover:text-gray-800 text-gray-500";
+            }
+        }
+
+        function renderTemplateEditor() {
+            const container = document.getElementById('template-editor-list');
+            if (!container) return;
+            container.innerHTML = "";
+
+            const searchQuery = (document.getElementById('template-search-input')?.value || "").toLowerCase();
+
+            const filtered = templates.filter(t => 
+                t.name.toLowerCase().includes(searchQuery) || 
+                (t.startTime && t.startTime.includes(searchQuery))
+            );
+
+            filtered.forEach((t) => {
+                const row = document.createElement('div');
+                row.className = "p-2.5 bg-gray-50 rounded-2xl border border-gray-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2";
+
+                const normStart = formatTimeHHMM(t.startTime || '');
+                const normEnd = formatTimeHHMM(t.endTime || '');
+
+                row.innerHTML = `
+                    <div class="flex items-center gap-2 flex-grow">
+                        <input type="text" value="${t.name}" onchange="updateTemplateField('${t.id}', 'name', this.value)" class="bg-white border border-gray-300 rounded-xl px-2.5 py-1 text-xs font-bold w-28 focus:ring-2 focus:ring-ios-blue outline-none">
+                        <div class="flex items-center gap-1">
+                            <input type="time" value="${normStart}" onchange="updateTemplateField('${t.id}', 'startTime', this.value)" class="bg-white border border-gray-300 rounded-xl px-2 py-1 text-xs font-medium focus:ring-2 focus:ring-ios-blue outline-none">
+                            <span class="text-xs text-gray-400">-</span>
+                            <input type="time" value="${normEnd}" onchange="updateTemplateField('${t.id}', 'endTime', this.value)" class="bg-white border border-gray-300 rounded-xl px-2 py-1 text-xs font-medium focus:ring-2 focus:ring-ios-blue outline-none">
+                        </div>
+                    </div>
+                    <button onclick="deleteTemplate('${t.id}')" class="text-red-500 hover:text-red-700 text-xs px-2 py-1 rounded-lg hover:bg-red-50 transition self-end sm:self-center">
+                        <i class="fa-regular fa-trash-can"></i> 削除
+                    </button>
+                `;
+
+                container.appendChild(row);
+            });
+        }
+
+        async function updateTemplateField(id, field, value) {
+            const t = templates.find(item => item.id === id);
+            if (t) {
+                t[field] = (field === 'startTime' || field === 'endTime') ? formatTimeHHMM(value) : value;
+                await saveEncryptedData();
+            }
+        }
+
+        async function addNewBlankTemplate() {
+            const newId = "t_" + Date.now();
+            templates.unshift({
+                id: newId,
+                name: "新規シフト",
+                startTime: "09:00",
+                endTime: "18:00"
+            });
+            await saveEncryptedData();
+            renderTemplateEditor();
+            updateGApiUI();
+            showToast("新しいシフトテンプレートを追加しました", "success");
+        }
+
+        async function deleteTemplate(id) {
+            templates = templates.filter(t => t.id !== id);
+            await saveEncryptedData();
+            renderTemplateEditor();
+            updateGApiUI();
+            showToast("テンプレートを削除しました", "info");
+        }
+
+        async function importFromSheetsText() {
+            const rawText = document.getElementById('import-textarea')?.value || "";
+            if (!rawText.trim()) {
+                showToast("データが空です", "error");
+                return;
+            }
+
+            const lines = rawText.trim().split("\n");
+            let count = 0;
+
+            lines.forEach(line => {
+                const parts = line.split(/[\t,]+/);
+                if (parts.length >= 1 && parts[0].trim()) {
+                    const name = parts[0].trim();
+                    const startTime = parts[1] ? formatTimeHHMM(parts[1].trim()) : "";
+                    const endTime = parts[2] ? formatTimeHHMM(parts[2].trim()) : "";
+
+                    templates.push({
+                        id: "imp_" + Date.now() + "_" + Math.random().toString(36).substring(2, 5),
+                        name: name,
+                        startTime: startTime,
+                        endTime: endTime
+                    });
+                    count++;
+                }
+            });
+
+            await saveEncryptedData();
+            renderTemplateEditor();
+            updateGApiUI();
+            switchTemplateTab('list');
+            document.getElementById('import-textarea').value = "";
+            showToast(`${count}件のテンプレートを取り込みました！`, "success");
+        }
+
+        function openModal(id) {
+            const modal = document.getElementById(id);
+            if (modal) modal.classList.remove('hidden');
+        }
+
+        function closeModal(id) {
+            const modal = document.getElementById(id);
+            if (modal) modal.classList.add('hidden');
+        }
+
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            if (!container) return;
+
+            const toast = document.createElement('div');
+            const bgClass = type === 'success' ? 'bg-emerald-600' : type === 'error' ? 'bg-red-600' : 'bg-gray-800';
+            toast.className = `${bgClass} text-white px-4 py-2.5 rounded-xl text-xs font-medium shadow-lg pointer-events-auto transition duration-300 opacity-0 transform translate-y-2`;
+            toast.innerText = message;
+
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.classList.remove('opacity-0', 'translate-y-2');
+            }, 10);
+
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-2');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
