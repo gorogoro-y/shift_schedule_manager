@@ -235,6 +235,9 @@
                 <button id="tab-btn-import" onclick="switchTemplateTab('import')" class="py-2 px-4 hover:text-gray-800">
                     <i class="fa-solid fa-file-csv text-emerald-600 mr-1"></i> Googleスプレッドシート取込
                 </button>
+                <button id="tab-btn-json" onclick="switchTemplateTab('json')" class="py-2 px-4 hover:text-gray-800">
+                    <i class="fa-solid fa-file-code text-purple-600 mr-1"></i> JSON入出力
+                </button>
             </div>
 
             <!-- Tab 1: Template List & Search -->
@@ -272,6 +275,43 @@
                     <button onclick="importFromSheetsText()" class="bg-emerald-600 text-white font-bold px-4 py-2 rounded-xl text-xs hover:bg-emerald-700 transition flex items-center gap-1">
                         <i class="fa-solid fa-circle-check"></i> テンプレートデータを取り込む
                     </button>
+                </div>
+            </div>
+
+            <!-- Tab 3: JSON Import / Export -->
+            <div id="tab-content-json" class="flex-grow hidden flex-col space-y-4 overflow-y-auto">
+                <div class="bg-purple-50 border border-purple-200 rounded-2xl p-3 text-xs text-purple-900 space-y-1">
+                    <p class="font-bold"><i class="fa-solid fa-lightbulb text-purple-600 mr-1"></i> JSONファイルの書き出し & 読み込み</p>
+                    <p class="text-purple-800">テンプレート設定をJSONファイルとして保存したり、バックアップしたJSONファイルを読み込んで一括復元できます。</p>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                    <div class="bg-gray-50 border border-gray-200 rounded-2xl p-4 flex flex-col justify-between space-y-3">
+                        <div>
+                            <h4 class="font-bold text-xs text-gray-800 flex items-center gap-1.5 mb-1">
+                                <i class="fa-solid fa-download text-purple-600"></i> JSONエクスポート
+                            </h4>
+                            <p class="text-[11px] text-gray-500">登録済みのテンプレートをJSONファイルとして保存（ダウンロード）します。</p>
+                        </div>
+                        <button onclick="exportTemplatesToJson()" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-2.5 rounded-xl text-xs transition flex items-center justify-center gap-2 shadow-sm">
+                            <i class="fa-solid fa-file-arrow-down"></i>
+                            <span>JSONファイルを保存</span>
+                        </button>
+                    </div>
+
+                    <div class="bg-gray-50 border border-gray-200 rounded-2xl p-4 flex flex-col justify-between space-y-3">
+                        <div>
+                            <h4 class="font-bold text-xs text-gray-800 flex items-center gap-1.5 mb-1">
+                                <i class="fa-solid fa-upload text-ios-blue"></i> JSONインポート
+                            </h4>
+                            <p class="text-[11px] text-gray-500">保存済みのJSONファイルを選択してテンプレートを一括復元します。</p>
+                        </div>
+                        <label class="w-full bg-ios-blue hover:bg-blue-600 text-white font-bold py-2.5 rounded-xl text-xs transition flex items-center justify-center gap-2 shadow-sm cursor-pointer">
+                            <i class="fa-solid fa-file-arrow-up"></i>
+                            <span>JSONファイルを選択</span>
+                            <input type="file" accept=".json,application/json" onchange="importTemplatesFromJson(event)" class="hidden">
+                        </label>
+                    </div>
                 </div>
             </div>
 
@@ -885,26 +925,91 @@
         function switchTemplateTab(tab) {
             const tabList = document.getElementById('tab-content-list');
             const tabImport = document.getElementById('tab-content-import');
+            const tabJson = document.getElementById('tab-content-json');
             const btnList = document.getElementById('tab-btn-list');
             const btnImport = document.getElementById('tab-btn-import');
+            const btnJson = document.getElementById('tab-btn-json');
 
             if (tab === 'list') {
                 tabList.classList.remove('hidden');
                 tabList.classList.add('flex');
                 tabImport.classList.add('hidden');
                 tabImport.classList.remove('flex');
+                if (tabJson) { tabJson.classList.add('hidden'); tabJson.classList.remove('flex'); }
 
                 btnList.className = "py-2 px-4 text-ios-blue border-b-2 border-ios-blue font-bold";
                 btnImport.className = "py-2 px-4 hover:text-gray-800 text-gray-500";
-            } else {
+                if (btnJson) btnJson.className = "py-2 px-4 hover:text-gray-800 text-gray-500";
+            } else if (tab === 'import') {
                 tabImport.classList.remove('hidden');
                 tabImport.classList.add('flex');
                 tabList.classList.add('hidden');
                 tabList.classList.remove('flex');
+                if (tabJson) { tabJson.classList.add('hidden'); tabJson.classList.remove('flex'); }
 
                 btnImport.className = "py-2 px-4 text-ios-blue border-b-2 border-ios-blue font-bold";
                 btnList.className = "py-2 px-4 hover:text-gray-800 text-gray-500";
+                if (btnJson) btnJson.className = "py-2 px-4 hover:text-gray-800 text-gray-500";
+            } else if (tab === 'json') {
+                if (tabJson) { tabJson.classList.remove('hidden'); tabJson.classList.add('flex'); }
+                tabList.classList.add('hidden');
+                tabList.classList.remove('flex');
+                tabImport.classList.add('hidden');
+                tabImport.classList.remove('flex');
+
+                if (btnJson) btnJson.className = "py-2 px-4 text-ios-blue border-b-2 border-ios-blue font-bold";
+                btnList.className = "py-2 px-4 hover:text-gray-800 text-gray-500";
+                btnImport.className = "py-2 px-4 hover:text-gray-800 text-gray-500";
             }
+        }
+
+        function exportTemplatesToJson() {
+            if (!templates || templates.length === 0) {
+                showToast("書き出すテンプレートデータがありません", "error");
+                return;
+            }
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(templates, null, 2));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", `shift_templates_${new Date().toISOString().slice(0,10)}.json`);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+            showToast("JSONファイルをダウンロードしました", "success");
+        }
+
+        function importTemplatesFromJson(event) {
+            const file = event.target.files && event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                try {
+                    const imported = JSON.parse(e.target.result);
+                    if (Array.isArray(imported)) {
+                        const validTemplates = imported.map((t, idx) => ({
+                            id: t.id || ("imp_json_" + Date.now() + "_" + idx),
+                            name: t.name || "名称未設定",
+                            startTime: formatTimeHHMM(t.startTime || ""),
+                            endTime: formatTimeHHMM(t.endTime || "")
+                        }));
+
+                        templates = validTemplates;
+                        await saveEncryptedData();
+                        renderTemplateEditor();
+                        updateGApiUI();
+                        switchTemplateTab('list');
+                        showToast(`${validTemplates.length}件のテンプレートを復元しました`, "success");
+                    } else {
+                        showToast("無効なJSON形式です（配列である必要があります）", "error");
+                    }
+                } catch(err) {
+                    console.error(err);
+                    showToast("JSONファイルの読み込みに失敗しました", "error");
+                }
+                event.target.value = "";
+            };
+            reader.readAsText(file);
         }
 
         function renderTemplateEditor() {
