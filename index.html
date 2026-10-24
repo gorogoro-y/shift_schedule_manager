@@ -59,15 +59,18 @@
 
             <!-- Top Action Controls -->
             <div class="flex items-center space-x-2">
+                <!-- GAS Setting Button -->
+                <button onclick="openModal('gas-modal')" id="header-gas-btn" class="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-semibold rounded-xl transition flex items-center gap-1.5 border border-emerald-300">
+                    <i class="fa-brands fa-google text-emerald-600"></i>
+                    <span>カレンダー連携</span>
+                    <span id="gas-status-dot" class="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span>
+                </button>
+
+                <!-- Template Manager Button -->
                 <button onclick="openModal('templates-modal')" class="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold rounded-xl transition flex items-center gap-1.5 border border-gray-300">
                     <i class="fa-solid fa-sliders text-ios-blue"></i>
                     <span>テンプレート管理</span>
                     <span id="badge-template-count" class="bg-ios-blue text-white text-[10px] px-1.5 py-0.2 rounded-full ml-0.5">5</span>
-                </button>
-
-                <!-- Passcode Lock Trigger -->
-                <button onclick="lockApp()" title="アプリをロック" class="w-8 h-8 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl transition flex items-center justify-center border border-slate-300">
-                    <i class="fa-solid fa-lock text-xs"></i>
                 </button>
             </div>
         </div>
@@ -112,51 +115,20 @@
 
     </main>
 
-    <!-- PASSCODE LOCK / SETUP OVERLAY -->
-    <div id="lock-screen" class="fixed inset-0 z-50 bg-slate-900/95 backdrop-blur-xl flex flex-col items-center justify-center p-4 text-white">
-        <div class="max-w-xs w-full bg-slate-800/90 border border-slate-700/80 rounded-3xl p-6 text-center space-y-5 shadow-2xl">
-            <div class="w-16 h-16 bg-ios-blue/20 rounded-full flex items-center justify-center mx-auto text-ios-blue text-2xl border border-ios-blue/30 shadow-inner">
-                <i id="lock-icon" class="fa-solid fa-lock"></i>
-            </div>
-            <div>
-                <h2 id="lock-title" class="text-lg font-bold text-white">パスコード認証</h2>
-                <p id="lock-subtitle" class="text-xs text-slate-400 mt-1">暗号化データを解除します</p>
-            </div>
-            
-            <div class="space-y-3">
-                <input type="password" id="passcode-input" maxlength="6" inputmode="numeric" placeholder="● ● ● ●" onkeydown="if(event.key==='Enter') submitPasscode()" class="w-full text-center text-2xl tracking-[0.5em] font-mono bg-slate-900/90 border border-slate-700 rounded-2xl py-3 text-white focus:ring-2 focus:ring-ios-blue outline-none transition">
-                <p id="lock-error-msg" class="text-xs text-red-400 hidden font-medium">パスコードが正しくありません</p>
-            </div>
-
-            <button onclick="submitPasscode()" class="w-full bg-ios-blue hover:bg-blue-600 text-white font-bold py-3 rounded-2xl transition text-sm shadow-lg active:scale-98">
-                <span id="lock-btn-text">解除する</span>
-            </button>
-        </div>
-    </div>
-
-    <!-- DAY MULTI-SHIFT DIRECT GOOGLE CALENDAR MODAL -->
+    <!-- DAY MULTI-SHIFT MODAL -->
     <div id="day-modal" class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/40 backdrop-blur-sm hidden">
         <div class="bg-white rounded-3xl max-w-lg w-full p-4 sm:p-5 shadow-2xl border border-gray-100 max-h-[90vh] flex flex-col space-y-3">
             <div class="flex items-center justify-between border-b border-gray-100 pb-3">
                 <div>
                     <h3 id="modal-date-title" class="text-base font-bold text-gray-900">日付のシフト登録</h3>
-                    <p class="text-[11px] text-gray-500">各シフトのボタンから個別にGoogleカレンダーへ登録できます</p>
+                    <p class="text-[11px] text-gray-500">シフトを選んでGoogleカレンダーへ登録できます</p>
                 </div>
                 <button onclick="closeModal('day-modal')" class="text-gray-400 hover:text-gray-600 w-8 h-8 rounded-full flex items-center justify-center bg-gray-100">
                     <i class="fa-solid fa-xmark"></i>
                 </button>
             </div>
 
-            <!-- Notice for Mobile Multi-shift Popups -->
-            <div class="bg-blue-50 border border-blue-200 rounded-2xl p-2.5 text-[11px] text-blue-900 flex items-start gap-2">
-                <i class="fa-solid fa-mobile-screen-button text-ios-blue text-sm mt-0.5 shrink-0"></i>
-                <div>
-                    <strong>スマホでの複数登録のコツ：</strong><br>
-                    下の各シフト枠にある <strong>「Googleカレンダーに追加」</strong> ボタンを1つずつ順にタップしてください（ブロックされずに確実に登録できます）。
-                </div>
-            </div>
-
-            <!-- Dynamic Shift Items List Container (Default 2 Rows) -->
+            <!-- Dynamic Shift Items List Container -->
             <div id="shift-items-container" class="flex-grow overflow-y-auto space-y-3 pr-1 py-1">
                 <!-- Shift Rows populated by JavaScript -->
             </div>
@@ -168,9 +140,95 @@
             </button>
 
             <!-- Actions inside Modal -->
-            <div class="pt-2 border-t border-gray-100 flex justify-end items-center">
-                <button onclick="closeModal('day-modal')" class="bg-gray-800 text-white font-bold px-5 py-2 rounded-xl text-xs hover:bg-gray-900 transition">
-                    完了（閉じる）
+            <div class="pt-2 border-t border-gray-100 flex items-center justify-between">
+                <button onclick="registerAllShiftsForDay()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2 rounded-xl text-xs transition flex items-center gap-1.5 shadow-sm">
+                    <i class="fa-solid fa-cloud-arrow-up"></i>
+                    <span>この日の全シフトを一括登録</span>
+                </button>
+                <button onclick="closeModal('day-modal')" class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold px-4 py-2 rounded-xl text-xs transition">
+                    閉じる
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- GAS SETTING MODAL -->
+    <div id="gas-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm hidden">
+        <div class="bg-white rounded-3xl max-w-xl w-full p-5 sm:p-6 shadow-2xl border border-gray-100 max-h-[90vh] flex flex-col space-y-4">
+            <div class="flex items-center justify-between border-b border-gray-100 pb-3">
+                <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 rounded-xl bg-emerald-100 flex items-center justify-center text-emerald-600">
+                        <i class="fa-brands fa-google text-lg"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-base font-bold text-gray-900">Googleカレンダー自動連携設定 (GAS)</h3>
+                        <p class="text-[11px] text-gray-500">ボタン1つでGoogleカレンダーに直接自動書き込みします</p>
+                    </div>
+                </div>
+                <button onclick="closeModal('gas-modal')" class="text-gray-400 hover:text-gray-600 w-8 h-8 rounded-full flex items-center justify-center bg-gray-100">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="space-y-4 overflow-y-auto flex-grow pr-1">
+                <!-- Status Box -->
+                <div id="gas-status-box" class="p-3 rounded-2xl bg-gray-50 border border-gray-200 text-xs flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <span id="gas-status-indicator" class="w-2.5 h-2.5 rounded-full bg-gray-400"></span>
+                        <span id="gas-status-text" class="font-medium text-gray-600">未設定（ブラウザの個別タブ登録で動作中）</span>
+                    </div>
+                    <button onclick="testGasConnection()" id="gas-test-btn" class="px-2.5 py-1 bg-white border border-gray-300 text-gray-700 rounded-lg text-xs hover:bg-gray-50 font-medium">
+                        接続テスト
+                    </button>
+                </div>
+
+                <!-- Input Fields -->
+                <div class="space-y-2">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 mb-1">
+                            Google Apps Script ウェブアプリ URL <span class="text-red-500">*</span>
+                        </label>
+                        <input type="url" id="gas-url-input" placeholder="https://script.google.com/macros/s/AKfycb.../exec" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-xs font-mono focus:ring-2 focus:ring-emerald-500 outline-none">
+                        <p class="text-[11px] text-gray-400 mt-1">※ GASを「ウェブアプリ」としてデプロイした際に発行されるURLを貼り付けます。</p>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 mb-1">
+                            登録先カレンダーID（通常は空欄のままでOK）
+                        </label>
+                        <input type="text" id="gas-calendar-id-input" placeholder="primary (メインカレンダー)" class="w-full bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-emerald-500 outline-none">
+                        <p class="text-[11px] text-gray-400 mt-1">特定のカレンダーに登録したい場合のみ、Googleカレンダーの設定にあるカレンダーIDを入力してください。</p>
+                    </div>
+                </div>
+
+                <!-- Setup Guide Box -->
+                <div class="bg-emerald-50 border border-emerald-200 rounded-2xl p-3.5 space-y-2 text-xs text-emerald-950">
+                    <div class="flex items-center justify-between">
+                        <h4 class="font-bold flex items-center gap-1.5 text-emerald-900">
+                            <i class="fa-solid fa-circle-info"></i> 設定手順（約3分で完了）
+                        </h4>
+                        <button onclick="copyGasScript()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-2.5 py-1 rounded-lg text-[11px] transition flex items-center gap-1">
+                            <i class="fa-regular fa-copy"></i> GASコードをコピー
+                        </button>
+                    </div>
+                    <ol class="list-decimal list-inside space-y-1 text-[11px] text-emerald-900/90 leading-relaxed">
+                        <li><a href="https://script.google.com/" target="_blank" class="underline font-semibold text-emerald-800 hover:text-emerald-950">Google Apps Script</a> を開き、「新しいプロジェクト」を作成</li>
+                        <li>上の「GASコードをコピー」を押し、エディタの内容を全消去して貼り付けて保存</li>
+                        <li>右上の「デプロイ」>「新しいデプロイ」をクリック</li>
+                        <li>歯車アイコンから「ウェブアプリ」を選択</li>
+                        <li>次のユーザーとして実行: <strong>「自分」</strong> / アクセスできるユーザー: <strong>「全員」</strong> にして「デプロイ」</li>
+                        <li>画面の案内に従ってアクセスを承認し、発行された「ウェブアプリのURL」を上の入力欄に貼り付けて「保存」</li>
+                    </ol>
+                </div>
+            </div>
+
+            <div class="pt-2 border-t border-gray-100 flex items-center justify-end gap-2">
+                <button onclick="closeModal('gas-modal')" class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold px-4 py-2 rounded-xl text-xs transition">
+                    キャンセル
+                </button>
+                <button onclick="saveGasSettings()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-5 py-2 rounded-xl text-xs transition flex items-center gap-1.5 shadow-sm">
+                    <i class="fa-solid fa-check"></i>
+                    <span>設定を保存</span>
                 </button>
             </div>
         </div>
@@ -291,9 +349,8 @@
     <script>
         let currentDate = new Date();
         let selectedDateStr = "";
-        let activeCryptoKey = null;
 
-        let templates = [
+        const DEFAULT_TEMPLATES = [
             { id: "t1", name: "早番", startTime: "08:30", endTime: "17:00" },
             { id: "t2", name: "遅番", startTime: "13:00", endTime: "21:30" },
             { id: "t3", name: "夜勤", startTime: "21:00", endTime: "08:00" },
@@ -301,186 +358,167 @@
             { id: "t5", name: "残業", startTime: "18:00", endTime: "21:00" }
         ];
 
-        const STORAGE_VERIFIER_KEY = "sp_passcode_verifier";
-        const STORAGE_SALT_KEY = "sp_passcode_salt";
-        const STORAGE_ENC_TEMPLATES = "sp_enc_templates";
+        let templates = [];
+
+        const STORAGE_TEMPLATES = "sp_templates";
+        const STORAGE_GAS_URL = "sp_gas_url";
+        const STORAGE_CALENDAR_ID = "sp_calendar_id";
 
         window.onload = function () {
-            checkPasscodeStatus();
-            renderCalendar();
-        };
-
-        async function deriveKey(passcode, saltUint8) {
-            const enc = new TextEncoder();
-            const keyMaterial = await crypto.subtle.importKey(
-                "raw",
-                enc.encode(passcode),
-                "PBKDF2",
-                false,
-                ["deriveKey"]
-            );
-            return await crypto.subtle.deriveKey(
-                {
-                    name: "PBKDF2",
-                    salt: saltUint8,
-                    iterations: 100000,
-                    hash: "SHA-256"
-                },
-                keyMaterial,
-                { name: "AES-GCM", length: 256 },
-                false,
-                ["encrypt", "decrypt"]
-            );
-        }
-
-        async function encryptText(text, key) {
-            const enc = new TextEncoder();
-            const iv = crypto.getRandomValues(new Uint8Array(12));
-            const encrypted = await crypto.subtle.encrypt(
-                { name: "AES-GCM", iv: iv },
-                key,
-                enc.encode(text)
-            );
-            const combined = new Uint8Array(iv.length + encrypted.byteLength);
-            combined.set(iv, 0);
-            combined.set(new Uint8Array(encrypted), iv.length);
-            return btoa(String.fromCharCode.apply(null, combined));
-        }
-
-        async function decryptText(cipherB64, key) {
-            const binary = atob(cipherB64);
-            const bytes = Uint8Array.from(binary, c => c.charCodeAt(0));
-            const iv = bytes.slice(0, 12);
-            const data = bytes.slice(12);
-            const decrypted = await crypto.subtle.decrypt(
-                { name: "AES-GCM", iv: iv },
-                key,
-                data
-            );
-            const dec = new TextDecoder();
-            return dec.decode(decrypted);
-        }
-
-        function checkPasscodeStatus() {
-            const verifier = localStorage.getItem(STORAGE_VERIFIER_KEY);
-            const lockTitle = document.getElementById('lock-title');
-            const lockSubtitle = document.getElementById('lock-subtitle');
-            const lockBtn = document.getElementById('lock-btn-text');
-
-            if (!verifier) {
-                if(lockTitle) lockTitle.innerText = "パスコード新規設定";
-                if(lockSubtitle) lockSubtitle.innerText = "データ保護用の4〜6桁のパスコードを入力してください";
-                if(lockBtn) lockBtn.innerText = "設定して保護を開始";
-            } else {
-                if(lockTitle) lockTitle.innerText = "パスコード認証";
-                if(lockSubtitle) lockSubtitle.innerText = "暗号化データを解除します";
-                if(lockBtn) lockBtn.innerText = "解除する";
-            }
-            document.getElementById('lock-screen')?.classList.remove('hidden');
-        }
-
-        async function submitPasscode() {
-            const input = document.getElementById('passcode-input');
-            const passcode = input?.value || "";
-            const errElem = document.getElementById('lock-error-msg');
-            errElem?.classList.add('hidden');
-
-            if (!passcode || passcode.length < 4) {
-                showLockError("4桁以上の数字を入力してください");
-                return;
-            }
-
-            const verifier = localStorage.getItem(STORAGE_VERIFIER_KEY);
-
-            try {
-                if (!verifier) {
-                    const salt = crypto.getRandomValues(new Uint8Array(16));
-                    const saltB64 = btoa(String.fromCharCode.apply(null, salt));
-                    
-                    activeCryptoKey = await deriveKey(passcode, salt);
-                    const encVerifier = await encryptText("VALID_PASSCODE_TOKEN", activeCryptoKey);
-
-                    localStorage.setItem(STORAGE_SALT_KEY, saltB64);
-                    localStorage.setItem(STORAGE_VERIFIER_KEY, encVerifier);
-
-                    await saveEncryptedData();
-
-                    document.getElementById('lock-screen')?.classList.add('hidden');
-                    input.value = "";
-                    showToast("パスコードを設定しデータを暗号化しました", "success");
-                    initializeAppAfterUnlock();
-                } else {
-                    const saltB64 = localStorage.getItem(STORAGE_SALT_KEY);
-                    const salt = Uint8Array.from(atob(saltB64), c => c.charCodeAt(0));
-
-                    const derived = await deriveKey(passcode, salt);
-                    const decryptedVerifier = await decryptText(verifier, derived);
-
-                    if (decryptedVerifier === "VALID_PASSCODE_TOKEN") {
-                        activeCryptoKey = derived;
-                        await loadEncryptedData();
-                        document.getElementById('lock-screen')?.classList.add('hidden');
-                        input.value = "";
-                        initializeAppAfterUnlock();
-                    } else {
-                        showLockError("パスコードが間違っています");
-                    }
-                }
-            } catch(e) {
-                console.error(e);
-                showLockError("パスコードが違います");
-            }
-        }
-
-        function showLockError(msg) {
-            const errElem = document.getElementById('lock-error-msg');
-            if (errElem) {
-                errElem.innerText = msg;
-                errElem.classList.remove('hidden');
-            }
-        }
-
-        function lockApp() {
-            activeCryptoKey = null;
-            document.getElementById('lock-screen')?.classList.remove('hidden');
-            document.getElementById('passcode-input').value = "";
-            checkPasscodeStatus();
-            showToast("アプリをロックしました", "info");
-        }
-
-        async function saveEncryptedData() {
-            if (!activeCryptoKey) return;
-            try {
-                const jsonTemplates = JSON.stringify(templates);
-                const encT = await encryptText(jsonTemplates, activeCryptoKey);
-                localStorage.setItem(STORAGE_ENC_TEMPLATES, encT);
-            } catch(e) {
-                console.error("Save encryption failed", e);
-            }
-        }
-
-        async function loadEncryptedData() {
-            if (!activeCryptoKey) return;
-            try {
-                const encT = localStorage.getItem(STORAGE_ENC_TEMPLATES);
-                if (encT) {
-                    const decJson = await decryptText(encT, activeCryptoKey);
-                    templates = JSON.parse(decJson);
-                }
-            } catch(e) {
-                console.error("Load decryption failed", e);
-            }
-        }
-
-        function initializeAppAfterUnlock() {
-            templates = templates.map(t => ({
-                ...t,
-                startTime: formatTimeHHMM(t.startTime),
-                endTime: formatTimeHHMM(t.endTime)
-            }));
+            loadTemplates();
+            loadGasSettings();
             renderCalendar();
             renderTemplateEditor();
             updateTemplateCountUI();
+        };
+
+        function loadTemplates() {
+            try {
+                const stored = localStorage.getItem(STORAGE_TEMPLATES);
+                if (stored) {
+                    templates = JSON.parse(stored);
+                } else {
+                    templates = [...DEFAULT_TEMPLATES];
+                    saveTemplates();
+                }
+            } catch(e) {
+                console.error("Templates load error", e);
+                templates = [...DEFAULT_TEMPLATES];
+            }
+        }
+
+        function saveTemplates() {
+            try {
+                localStorage.setItem(STORAGE_TEMPLATES, JSON.stringify(templates));
+            } catch(e) {
+                console.error("Templates save error", e);
+            }
+        }
+
+        function loadGasSettings() {
+            const gasUrl = localStorage.getItem(STORAGE_GAS_URL) || "";
+            const calId = localStorage.getItem(STORAGE_CALENDAR_ID) || "";
+
+            const inputUrl = document.getElementById('gas-url-input');
+            const inputCalId = document.getElementById('gas-calendar-id-input');
+            if (inputUrl) inputUrl.value = gasUrl;
+            if (inputCalId) inputCalId.value = calId;
+
+            updateGasStatusUI(!!gasUrl);
+        }
+
+        function saveGasSettings() {
+            const urlInput = document.getElementById('gas-url-input');
+            const calInput = document.getElementById('gas-calendar-id-input');
+
+            const url = (urlInput?.value || "").trim();
+            const calId = (calInput?.value || "").trim();
+
+            localStorage.setItem(STORAGE_GAS_URL, url);
+            localStorage.setItem(STORAGE_CALENDAR_ID, calId);
+
+            updateGasStatusUI(!!url);
+            closeModal('gas-modal');
+            showToast(url ? "Googleカレンダー連携設定を保存しました" : "連携設定を解除しました", "success");
+        }
+
+        function updateGasStatusUI(isConnected) {
+            const dot = document.getElementById('gas-status-dot');
+            const indicator = document.getElementById('gas-status-indicator');
+            const statusText = document.getElementById('gas-status-text');
+
+            if (isConnected) {
+                if (dot) dot.className = "w-2 h-2 rounded-full bg-emerald-500 inline-block";
+                if (indicator) indicator.className = "w-2.5 h-2.5 rounded-full bg-emerald-500";
+                if (statusText) statusText.innerText = "連携設定済み（Googleカレンダー自動書き込み有効）";
+            } else {
+                if (dot) dot.className = "w-2 h-2 rounded-full bg-amber-400 inline-block";
+                if (indicator) indicator.className = "w-2.5 h-2.5 rounded-full bg-amber-400";
+                if (statusText) statusText.innerText = "未設定（クリック時にGoogleカレンダー画面を開く方式）";
+            }
+        }
+
+        async function testGasConnection() {
+            const url = (document.getElementById('gas-url-input')?.value || "").trim();
+            if (!url) {
+                showToast("URLを入力してください", "error");
+                return;
+            }
+
+            const btn = document.getElementById('gas-test-btn');
+            const originalText = btn.innerText;
+            btn.innerText = "通信確認中...";
+            btn.disabled = true;
+
+            try {
+                const res = await fetch(url, { method: 'GET' });
+                const json = await res.json();
+                if (json && json.status === 'ok') {
+                    showToast("接続成功！GASと正常に通信できました", "success");
+                } else {
+                    showToast("通信できましたが、期待される応答ではありませんでした", "info");
+                }
+            } catch(e) {
+                console.error("GAS connection test failed", e);
+                showToast("通信に失敗しました。URLや公開設定を確認してください", "error");
+            } finally {
+                btn.innerText = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        function copyGasScript() {
+            const scriptText = `function doPost(e) {
+  var output = {};
+  try {
+    var contents = e.postData.contents;
+    var data = JSON.parse(contents);
+    var calendarId = data.calendarId || 'primary';
+    var calendar = CalendarApp.getCalendarById(calendarId) || CalendarApp.getDefaultCalendar();
+    if (!calendar) throw new Error('カレンダーが見つかりません: ' + calendarId);
+    
+    var events = Array.isArray(data.events) ? data.events : [data];
+    var createdCount = 0;
+    
+    for (var i = 0; i < events.length; i++) {
+      var ev = events[i];
+      var title = ev.title || 'シフト';
+      var dateStr = ev.date;
+      var startTime = ev.startTime;
+      var endTime = ev.endTime;
+      var memo = ev.memo || '';
+      if (!dateStr) continue;
+      
+      if (startTime && endTime) {
+        var startParts = startTime.split(':');
+        var endParts = endTime.split(':');
+        var dateParts = dateStr.split('-');
+        var sDate = new Date(parseInt(dateParts[0],10), parseInt(dateParts[1],10)-1, parseInt(dateParts[2],10), parseInt(startParts[0],10), parseInt(startParts[1],10), 0);
+        var eDate = new Date(parseInt(dateParts[0],10), parseInt(dateParts[1],10)-1, parseInt(dateParts[2],10), parseInt(endParts[0],10), parseInt(endParts[1],10), 0);
+        if (eDate <= sDate) eDate.setDate(eDate.getDate() + 1); // 夜勤等の翌日跨ぎ判定
+        calendar.createEvent(title, sDate, eDate, { description: memo });
+      } else {
+        var dParts = dateStr.split('-');
+        calendar.createAllDayEvent(title, new Date(parseInt(dParts[0],10), parseInt(dParts[1],10)-1, parseInt(dParts[2],10)), { description: memo });
+      }
+      createdCount++;
+    }
+    output = { status: 'success', message: createdCount + '件の予定を登録しました', count: createdCount };
+  } catch (err) {
+    output = { status: 'error', message: err.toString() };
+  }
+  return ContentService.createTextOutput(JSON.stringify(output)).setMimeType(ContentService.MimeType.JSON);
+}
+
+function doGet() {
+  return ContentService.createTextOutput(JSON.stringify({ status: 'ok', message: 'GAS待機中' })).setMimeType(ContentService.MimeType.JSON);
+}`;
+
+            navigator.clipboard.writeText(scriptText).then(() => {
+                showToast("GASコードをクリップボードにコピーしました！", "success");
+            }).catch(() => {
+                showToast("コピーに失敗しました。gas_code.js ファイルから直接コピーしてください", "error");
+            });
         }
 
         function formatTimeHHMM(timeStr) {
@@ -601,6 +639,9 @@
                 `<option value="${t.id}">${t.name} (${t.startTime || '終日'} - ${t.endTime || ''})</option>`
             ).join('');
 
+            const gasUrl = localStorage.getItem(STORAGE_GAS_URL);
+            const btnLabel = gasUrl ? "Googleカレンダーに自動書き込み" : "Googleカレンダーに追加 (手動タブ)";
+
             card.innerHTML = `
                 <div class="flex items-center justify-between border-b border-gray-200/80 pb-2">
                     <div class="flex items-center gap-2">
@@ -649,10 +690,13 @@
                 </div>
 
                 <!-- DIRECT PER-SHIFT GOOGLE CALENDAR BUTTON -->
-                <div class="pt-1">
-                    <button type="button" onclick="openSingleShiftGCal(this)" class="btn-single-gcal w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-sm active:scale-98">
+                <div class="pt-1 flex items-center gap-1.5">
+                    <button type="button" onclick="handleShiftRegister(this)" class="btn-single-gcal flex-grow py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-sm active:scale-98">
                         <i class="fa-brands fa-google text-sm"></i>
-                        <span class="btn-text">このシフトをGoogleカレンダーに追加</span>
+                        <span class="btn-text">${btnLabel}</span>
+                    </button>
+                    <button type="button" onclick="openManualGoogleTab(this)" title="Googleカレンダー画面を手動で開く" class="p-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-xl text-xs transition">
+                        <i class="fa-solid fa-arrow-up-right-from-square"></i>
                     </button>
                 </div>
             `;
@@ -660,10 +704,7 @@
             container.appendChild(card);
         }
 
-        function openSingleShiftGCal(btn) {
-            const card = btn.closest('.shift-card');
-            if (!card || !selectedDateStr) return;
-
+        function extractShiftDataFromCard(card) {
             const name = card.querySelector('.shift-name').value.trim();
             const startTime = card.querySelector('.shift-start-time').value;
             const endTime = card.querySelector('.shift-end-time').value;
@@ -674,19 +715,133 @@
                 memo = memo ? `【早出 ${earlyMins}分】 ${memo}` : `【早出 ${earlyMins}分】`;
             }
 
-            if (!name && !startTime) {
+            return {
+                title: name || "シフト",
+                date: selectedDateStr,
+                startTime: startTime,
+                endTime: endTime,
+                memo: memo,
+                isValid: !!(name || startTime)
+            };
+        }
+
+        async function handleShiftRegister(btn) {
+            const card = btn.closest('.shift-card');
+            if (!card || !selectedDateStr) return;
+
+            const shift = extractShiftDataFromCard(card);
+            if (!shift.isValid) {
                 showToast("シフト名または開始時間を入力してください", "error");
                 return;
             }
 
-            openGoogleCalendarUrl(selectedDateStr, name || "シフト", startTime, endTime, memo);
+            const gasUrl = localStorage.getItem(STORAGE_GAS_URL);
 
-            // Update button visual to reflect completion
-            btn.classList.remove('bg-emerald-600', 'hover:bg-emerald-700', 'text-white');
-            btn.classList.add('bg-emerald-100', 'text-emerald-900', 'border', 'border-emerald-300');
-            const textSpan = btn.querySelector('.btn-text');
-            if (textSpan) textSpan.innerText = "✓ Googleカレンダーに追加済み (再開く)";
-            showToast("Googleカレンダーの登録画面を開きました", "info");
+            if (gasUrl) {
+                // GAS 自動書き込み
+                const originalHtml = btn.innerHTML;
+                btn.disabled = true;
+                btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin text-sm"></i> <span>カレンダーに書き込み中...</span>`;
+
+                try {
+                    const calendarId = localStorage.getItem(STORAGE_CALENDAR_ID) || "primary";
+                    const payload = {
+                        calendarId: calendarId,
+                        events: [shift]
+                    };
+
+                    const response = await fetch(gasUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'text/plain;charset=utf-8'
+                        },
+                        body: JSON.stringify(payload)
+                    });
+
+                    const resJson = await response.json();
+                    if (resJson && resJson.status === 'success') {
+                        btn.className = "btn-single-gcal flex-grow py-2 bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5";
+                        btn.innerHTML = `✓ Googleカレンダーに登録完了！ (再登録)`;
+                        btn.disabled = false;
+                        showToast("Googleカレンダーに自動書き込みしました！", "success");
+                    } else {
+                        throw new Error(resJson.message || "登録エラー");
+                    }
+                } catch(err) {
+                    console.error("GAS register error:", err);
+                    btn.disabled = false;
+                    btn.innerHTML = originalHtml;
+                    showToast("自動登録に失敗しました。URL設定を確認するか右のボタンから手動登録してください", "error");
+                }
+            } else {
+                // GAS未設定時は手動タブで開く
+                openGoogleCalendarUrl(shift.date, shift.title, shift.startTime, shift.endTime, shift.memo);
+                showToast("Googleカレンダー登録画面を開きました（連携設定すると自動登録になります）", "info");
+            }
+        }
+
+        function openManualGoogleTab(btn) {
+            const card = btn.closest('.shift-card');
+            if (!card || !selectedDateStr) return;
+            const shift = extractShiftDataFromCard(card);
+            if (!shift.isValid) {
+                showToast("シフト名または開始時間を入力してください", "error");
+                return;
+            }
+            openGoogleCalendarUrl(shift.date, shift.title, shift.startTime, shift.endTime, shift.memo);
+        }
+
+        async function registerAllShiftsForDay() {
+            const container = document.getElementById('shift-items-container');
+            if (!container) return;
+
+            const cards = container.querySelectorAll('.shift-card');
+            const shiftsToRegister = [];
+
+            cards.forEach(card => {
+                const shift = extractShiftDataFromCard(card);
+                if (shift.isValid) {
+                    shiftsToRegister.push(shift);
+                }
+            });
+
+            if (shiftsToRegister.length === 0) {
+                showToast("登録するシフトデータがありません", "error");
+                return;
+            }
+
+            const gasUrl = localStorage.getItem(STORAGE_GAS_URL);
+            if (!gasUrl) {
+                showToast("上部の「カレンダー連携」からGASのURLを設定すると、一括自動書き込みができます", "info");
+                openModal('gas-modal');
+                return;
+            }
+
+            try {
+                showToast("全シフトをGoogleカレンダーに書き込み中...", "info");
+                const calendarId = localStorage.getItem(STORAGE_CALENDAR_ID) || "primary";
+                const payload = {
+                    calendarId: calendarId,
+                    events: shiftsToRegister
+                };
+
+                const res = await fetch(gasUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify(payload)
+                });
+
+                const json = await res.json();
+                if (json && json.status === 'success') {
+                    showToast(`${shiftsToRegister.length}件のシフトをGoogleカレンダーに書き込みました！`, "success");
+                    closeModal('day-modal');
+                } else {
+                    throw new Error(json.message || "エラー");
+                }
+            } catch(e) {
+                console.error("Batch register error", e);
+                showToast("登録に失敗しました。設定を確認してください", "error");
+            }
         }
 
         function addEmptyShiftRow() {
@@ -861,7 +1016,7 @@
             if (!file) return;
 
             const reader = new FileReader();
-            reader.onload = async function(e) {
+            reader.onload = function(e) {
                 try {
                     const imported = JSON.parse(e.target.result);
                     if (Array.isArray(imported)) {
@@ -873,7 +1028,7 @@
                         }));
 
                         templates = validTemplates;
-                        await saveEncryptedData();
+                        saveTemplates();
                         renderTemplateEditor();
                         updateTemplateCountUI();
                         switchTemplateTab('list');
@@ -927,15 +1082,15 @@
             });
         }
 
-        async function updateTemplateField(id, field, value) {
+        function updateTemplateField(id, field, value) {
             const t = templates.find(item => item.id === id);
             if (t) {
                 t[field] = (field === 'startTime' || field === 'endTime') ? formatTimeHHMM(value) : value;
-                await saveEncryptedData();
+                saveTemplates();
             }
         }
 
-        async function addNewBlankTemplate() {
+        function addNewBlankTemplate() {
             const newId = "t_" + Date.now();
             templates.unshift({
                 id: newId,
@@ -943,21 +1098,21 @@
                 startTime: "09:00",
                 endTime: "18:00"
             });
-            await saveEncryptedData();
+            saveTemplates();
             renderTemplateEditor();
             updateTemplateCountUI();
             showToast("新しいシフトテンプレートを追加しました", "success");
         }
 
-        async function deleteTemplate(id) {
+        function deleteTemplate(id) {
             templates = templates.filter(t => t.id !== id);
-            await saveEncryptedData();
+            saveTemplates();
             renderTemplateEditor();
             updateTemplateCountUI();
             showToast("テンプレートを削除しました", "info");
         }
 
-        async function importFromSheetsText() {
+        function importFromSheetsText() {
             const rawText = document.getElementById('import-textarea')?.value || "";
             if (!rawText.trim()) {
                 showToast("データが空です", "error");
@@ -984,7 +1139,7 @@
                 }
             });
 
-            await saveEncryptedData();
+            saveTemplates();
             renderTemplateEditor();
             updateTemplateCountUI();
             switchTemplateTab('list');
